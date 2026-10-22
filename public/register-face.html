@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pendaftaran Wajah Biometrik</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Face API Local -->
+  <script src="/vendor/face-api.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col min-h-screen">
+
+  <div class="mobile-container bg-slate-900 border border-slate-800 text-slate-100 flex flex-col">
+    <!-- Header -->
+    <header class="p-4 bg-slate-900/90 backdrop-blur border-b border-slate-800 flex items-center justify-between z-20">
+      <a href="/" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+      </a>
+      <div class="text-center">
+        <h1 class="text-base font-semibold text-white">Daftar Biometrik Wajah</h1>
+        <p class="text-[11px] text-slate-400">Pindai wajah untuk verifikasi absen</p>
+      </div>
+      <div class="w-9"></div>
+    </header>
+
+    <!-- Main Camera View -->
+    <main class="flex-1 flex flex-col p-4 relative overflow-hidden items-center justify-center">
+      
+      <!-- Video Container with Guide Overlay -->
+      <div class="relative w-full aspect-[3/4] max-w-[320px] rounded-3xl overflow-hidden bg-black shadow-2xl border border-slate-700 flex items-center justify-center">
+        <video id="video" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
+        <canvas id="overlay" class="absolute top-0 left-0 w-full h-full transform -scale-x-100 pointer-events-none"></canvas>
+
+        <!-- Face Guide Oval -->
+        <div id="guideOval" class="face-scan-guide"></div>
+
+        <!-- Scanning Status Badge -->
+        <div id="statusBadge" class="absolute bottom-4 left-4 right-4 py-2 px-3 bg-slate-900/80 backdrop-blur-md rounded-xl border border-slate-700 text-xs text-center text-slate-300 flex items-center justify-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse"></span>
+          <span id="statusText">Memuat model AI pendeteksi wajah...</span>
+        </div>
+      </div>
+
+      <!-- Instructions & Action Button -->
+      <div class="w-full max-w-[320px] mt-4 space-y-3">
+        <div class="p-3 bg-slate-800/60 rounded-2xl border border-slate-700/60 text-xs text-slate-400 space-y-1">
+          <p class="font-medium text-slate-300 flex items-center gap-1.5">
+            <i data-lucide="info" class="w-4 h-4 text-blue-400"></i> Panduan Perekaman:
+          </p>
+          <ul class="list-disc list-inside space-y-0.5 text-[11px]">
+            <li>Pastikan pencahayaan ruangan cukup terang</li>
+            <li>Lepas masker atau kacamata hitam</li>
+            <li>Posisikan wajah tepat di dalam lingkaran</li>
+          </ul>
+        </div>
+
+        <button id="captureBtn" disabled
+          class="w-full py-3.5 px-4 bg-blue-600 disabled:bg-slate-800 disabled:text-slate-600 hover:bg-blue-500 text-white font-semibold rounded-2xl shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+          <i data-lucide="camera" class="w-5 h-5"></i>
+          <span id="captureText">Tunggu Deteksi Wajah...</span>
+        </button>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const guideOval = document.getElementById('guideOval');
+    const statusBadge = document.getElementById('statusBadge');
+    const statusText = document.getElementById('statusText');
+    const captureBtn = document.getElementById('captureBtn');
+    const captureText = document.getElementById('captureText');
+
+    let stream = null;
+    let detectionInterval = null;
+    let currentDescriptor = null;
+    let modelsLoaded = false;
+
+    // Cek otentikasi
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      window.location.href = '/login';
+    }
+
+    // 1. Muat Model Face-API dari folder /models
+    async function loadModels() {
+      try {
+        statusText.textContent = 'Memuat model AI (SSD MobileNet)...';
+        const MODEL_URL = '/models';
+
+        await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+
+        modelsLoaded = true;
+        statusText.textContent = 'Model AI siap. Membuka kamera...';
+        await startCamera();
+      } catch (err) {
+        console.error('Error load models:', err);
+        statusText.textContent = 'Gagal memuat model AI biometrik.';
+        guideOval.classList.add('fail');
+      }
+    }
+
+    // 2. Akses Kamera Depan
+    async function startCamera() {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'user',
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          },
+          audio: false
+        });
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          video.play();
+          startFaceDetection();
+        };
+      } catch (err) {
+        console.error('Camera error:', err);
+        statusText.textContent = 'Akses kamera ditolak atau tidak didukung.';
+        guideOval.classList.add('fail');
+      }
+    }
+
+    // 3. Deteksi Wajah Real-Time
+    function startFaceDetection() {
+      const displaySize = { width: video.videoWidth || 320, height: video.videoHeight || 426 };
+      faceapi.matchDimensions(overlay, displaySize);
+
+      detectionInterval = setInterval(async () => {
+        if (!modelsLoaded || video.paused || video.ended) return;
+
+        const detections = await faceapi.detectSingleFace(video)
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+
+        if (detections) {
+          const dims = faceapi.matchDimensions(overlay, video, true);
+          const resizedDetections = faceapi.resizeResults(detections, dims);
+
+          // Bersihkan canvas
+          const ctx = overlay.getContext('2d');
+          ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+          currentDescriptor = Array.from(detections.descriptor);
+
+          guideOval.classList.add('success');
+          guideOval.classList.remove('fail');
+          statusBadge.classList.remove('bg-slate-900/80', 'bg-red-900/80');
+          statusBadge.classList.add('bg-emerald-900/90');
+          statusText.textContent = 'Wajah terdeteksi jelas! Siap direkam.';
+
+          captureBtn.disabled = false;
+          captureText.textContent = 'Simpan Wajah Biometrik';
+        } else {
+          currentDescriptor = null;
+          guideOval.classList.remove('success');
+          statusBadge.classList.remove('bg-emerald-900/90');
+          statusBadge.classList.add('bg-slate-900/80');
+          statusText.textContent = 'Posisikan wajah Anda di dalam lingkaran...';
+
+          captureBtn.disabled = true;
+          captureText.textContent = 'Mencari Wajah...';
+        }
+      }, 350);
+    }
+
+    // 4. Capture & Simpan ke Server
+    captureBtn.addEventListener('click', async () => {
+      if (!currentDescriptor) return;
+
+      captureBtn.disabled = true;
+      captureText.textContent = 'Menyimpan Biometrik...';
+
+      // Buat snapshot gambar untuk avatar
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 480;
+      canvas.height = video.videoHeight || 640;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const photoBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+      try {
+        const res = await fetch('/api/auth/register-face', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            descriptor: currentDescriptor,
+            photoBase64: photoBase64
+          })
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+          throw new Error(data.message || 'Gagal menyimpan biometrik wajah.');
+        }
+
+        // Hentikan kamera
+        if (stream) {
+          stream.getTracks().forEach(t => t.stop());
+        }
+        clearInterval(detectionInterval);
+
+        alert('Biometrik wajah berhasil didaftarkan!');
+        window.location.href = '/';
+      } catch (err) {
+        alert(err.message);
+        captureBtn.disabled = false;
+        captureText.textContent = 'Coba Lagi';
+      }
+    });
+
+    // Inisialisasi saat halaman dibuka
+    window.addEventListener('DOMContentLoaded', loadModels);
+  </script>
+</body>
+</html>

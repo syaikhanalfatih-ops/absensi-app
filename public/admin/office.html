@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengaturan Geofence Kantor - Presensi Pintar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+  <!-- Top Navbar -->
+  <nav class="bg-slate-900 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+        <i data-lucide="scan-face" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-white leading-tight">Presensi Pintar</h1>
+        <p class="text-[11px] text-slate-400">Panel Administrator HRD</p>
+      </div>
+    </div>
+
+    <!-- Nav Links -->
+    <div class="flex items-center gap-2 text-xs">
+      <a href="/admin" class="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/admin/employees.html" class="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5">
+        <i data-lucide="users" class="w-4 h-4"></i>
+        <span>Karyawan</span>
+      </a>
+      <a href="/admin/office.html" class="px-3.5 py-2 rounded-xl bg-blue-600 text-white font-medium flex items-center gap-1.5 shadow-sm">
+        <i data-lucide="map-pin" class="w-4 h-4"></i>
+        <span>Geofence Kantor</span>
+      </a>
+      <a href="/admin/qr-display.html" target="_blank" class="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5">
+        <i data-lucide="qr-code" class="w-4 h-4"></i>
+        <span>Layar QR Lobi</span>
+      </a>
+      <a href="/login" class="ml-2 px-3 py-2 rounded-xl bg-slate-800 text-slate-400 hover:text-red-400 border border-slate-700/60 transition flex items-center gap-1.5">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
+        <span>Keluar</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="flex-1 p-6 max-w-4xl w-full mx-auto space-y-6">
+
+    <div>
+      <h2 class="text-xl font-bold text-white">Pengaturan Lokasi & Geofence</h2>
+      <p class="text-xs text-slate-400 mt-0.5">Tentukan batas radius GPS kantor dan jam kerja operasional.</p>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+      <form id="officeForm" class="space-y-4 text-xs">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1.5">Nama Kantor / Cabang</label>
+            <input type="text" id="officeName" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white">
+          </div>
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1.5">Radius Geofence (Meter)</label>
+            <input type="number" id="officeRadius" required min="10" max="5000" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-semibold mb-1.5">Alamat Lengkap</label>
+          <textarea id="officeAddress" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white"></textarea>
+        </div>
+
+        <!-- Coordinates with Geolocation button -->
+        <div class="p-4 bg-slate-800/40 border border-slate-700/60 rounded-2xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-slate-200 flex items-center gap-1.5">
+              <i data-lucide="crosshair" class="w-4 h-4 text-blue-400"></i> Koordinat Titik Pusat
+            </span>
+            <button type="button" id="btnGetCurrentCoords" class="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-medium flex items-center gap-1.5 transition">
+              <i data-lucide="navigation" class="w-3.5 h-3.5"></i>
+              <span>Gunakan Lokasi Saya Saat Ini</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 mb-1">Latitude</label>
+              <input type="number" step="any" id="officeLat" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono">
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">Longitude</label>
+              <input type="number" step="any" id="officeLng" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono">
+            </div>
+          </div>
+        </div>
+
+        <!-- Working Hours & Tolerance -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1.5">Jam Masuk Kerja</label>
+            <input type="time" id="workStart" step="1" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white">
+          </div>
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1.5">Jam Pulang Kerja</label>
+            <input type="time" id="workEnd" step="1" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white">
+          </div>
+          <div>
+            <label class="block text-slate-300 font-semibold mb-1.5">Toleransi Terlambat (Menit)</label>
+            <input type="number" id="lateTolerance" min="0" max="120" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white">
+          </div>
+        </div>
+
+        <div class="pt-4 flex justify-end">
+          <button type="submit" id="btnSaveOffice" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-blue-600/20 active:scale-[0.98] transition">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>Simpan Perubahan Geofence</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </main>
+
+  <script>
+    lucide.createIcons();
+
+    const token = localStorage.getItem('auth_token');
+    const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+
+    if (!token || userInfo.role !== 'admin') {
+      window.location.href = '/login';
+    }
+
+    let officeId = 1;
+
+    async function loadOffice() {
+      try {
+        const res = await fetch('/api/office/all', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.success && data.offices.length > 0) {
+          const off = data.offices[0];
+          officeId = off.id;
+          document.getElementById('officeName').value = off.name;
+          document.getElementById('officeAddress').value = off.address || '';
+          document.getElementById('officeLat').value = off.latitude;
+          document.getElementById('officeLng').value = off.longitude;
+          document.getElementById('officeRadius').value = off.radius;
+          document.getElementById('workStart').value = off.work_start;
+          document.getElementById('workEnd').value = off.work_end;
+          document.getElementById('lateTolerance').value = off.late_tolerance;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Ambil koordinat GPS saat ini
+    document.getElementById('btnGetCurrentCoords').addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        alert('Browser tidak mendukung Geolocation.');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          document.getElementById('officeLat').value = pos.coords.latitude.toFixed(8);
+          document.getElementById('officeLng').value = pos.coords.longitude.toFixed(8);
+          alert(`Koordinat berhasil diambil!\nLatitude: ${pos.coords.latitude}\nLongitude: ${pos.coords.longitude}`);
+        },
+        (err) => {
+          alert('Gagal mengambil lokasi GPS: ' + err.message);
+        },
+        { enableHighAccuracy: true }
+      );
+    });
+
+    // Simpan Perubahan
+    document.getElementById('officeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const res = await fetch(`/api/office/${officeId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            name: document.getElementById('officeName').value.trim(),
+            address: document.getElementById('officeAddress').value.trim(),
+            latitude: parseFloat(document.getElementById('officeLat').value),
+            longitude: parseFloat(document.getElementById('officeLng').value),
+            radius: parseInt(document.getElementById('officeRadius').value),
+            work_start: document.getElementById('workStart').value,
+            work_end: document.getElementById('workEnd').value,
+            late_tolerance: parseInt(document.getElementById('lateTolerance').value)
+          })
+        });
+
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        alert('Pengaturan geofence kantor berhasil disimpan!');
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    loadOffice();
+  </script>
+</body>
+</html>

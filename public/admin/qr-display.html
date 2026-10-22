@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Layar QR Presensi Lobi - Presensi Pintar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden select-none">
+
+  <!-- Background Ambient Lights -->
+  <div class="absolute -top-40 -left-40 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+  <!-- Main Display Card -->
+  <div class="w-full max-w-lg bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl backdrop-blur-md flex flex-col items-center text-center relative z-10">
+
+    <!-- Header & Office Info -->
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-10 h-10 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
+        <i data-lucide="building-2" class="w-5 h-5"></i>
+      </div>
+      <div class="text-left">
+        <h1 class="text-base font-bold text-white leading-tight">Presensi Lobi Kantor</h1>
+        <p id="displayOfficeName" class="text-xs text-slate-400">Kantor Pusat</p>
+      </div>
+    </div>
+
+    <!-- Live Digital Clock -->
+    <div class="my-4 py-2 px-6 rounded-2xl bg-slate-950/60 border border-slate-800/80 inline-flex flex-col items-center">
+      <div id="liveClock" class="text-4xl font-extrabold tracking-tight font-mono text-white">00:00:00</div>
+      <div id="liveDate" class="text-xs text-slate-400 font-medium mt-0.5">Memuat Tanggal...</div>
+    </div>
+
+    <!-- Dynamic QR Code Container -->
+    <div class="p-4 bg-white rounded-3xl shadow-xl my-3 relative group">
+      <img id="qrImage" src="" alt="Dynamic QR Code" class="w-64 h-64 object-contain rounded-2xl">
+      <div id="qrLoadingOverlay" class="absolute inset-0 bg-white/90 rounded-3xl flex flex-col items-center justify-center text-slate-800">
+        <i data-lucide="loader-2" class="w-8 h-8 animate-spin text-blue-600"></i>
+        <span class="text-xs font-semibold mt-2">Membuat QR Dinamis...</span>
+      </div>
+    </div>
+
+    <!-- Countdown Timer & Progress Bar -->
+    <div class="w-full max-w-xs space-y-1.5 mt-2">
+      <div class="flex items-center justify-between text-xs text-slate-400">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          QR Code Dinamis
+        </span>
+        <span>Refresh: <strong id="countdownSec" class="text-blue-400 font-mono">30</strong>s</span>
+      </div>
+      <!-- Progress Bar -->
+      <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div id="countdownBar" class="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-linear w-full"></div>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="mt-6 p-3.5 bg-slate-800/50 rounded-2xl border border-slate-700/60 text-xs text-slate-400 max-w-xs space-y-1">
+      <p class="font-medium text-slate-200 flex items-center justify-center gap-1.5">
+        <i data-lucide="smartphone" class="w-4 h-4 text-blue-400"></i> Cara Presensi:
+      </p>
+      <p class="text-[11px] leading-relaxed">
+        Buka aplikasi <strong>Presensi Pintar</strong> di HP Anda, pilih menu <strong>Scan QR Code Kantor</strong>, lalu arahkan ke layar ini.
+      </p>
+    </div>
+
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    const token = localStorage.getItem('auth_token');
+    const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+
+    // Jika belum login admin, redirect ke login
+    if (!token) {
+      window.location.href = '/login';
+    }
+
+    // Live Clock
+    function updateClock() {
+      const now = new Date();
+      const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+      const dateStr = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+      const timeStr = [
+        String(now.getHours()).padStart(2, '0'),
+        String(now.getMinutes()).padStart(2, '0'),
+        String(now.getSeconds()).padStart(2, '0')
+      ].join(':');
+
+      document.getElementById('liveClock').textContent = timeStr;
+      document.getElementById('liveDate').textContent = dateStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Dynamic QR Generator
+    let remainingSeconds = 30;
+    const totalDuration = 30;
+    const qrImage = document.getElementById('qrImage');
+    const qrLoadingOverlay = document.getElementById('qrLoadingOverlay');
+    const countdownSec = document.getElementById('countdownSec');
+    const countdownBar = document.getElementById('countdownBar');
+
+    async function fetchDynamicQr() {
+      qrLoadingOverlay.classList.remove('hidden');
+      try {
+        const res = await fetch('/api/qr/dynamic', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.success) {
+          qrImage.src = data.qr_image;
+          qrLoadingOverlay.classList.add('hidden');
+          remainingSeconds = data.expires_in_seconds || 30;
+          updateProgressBar();
+        }
+      } catch (err) {
+        console.error('Error fetch dynamic QR:', err);
+      }
+    }
+
+    function updateProgressBar() {
+      countdownSec.textContent = remainingSeconds;
+      const percentage = (remainingSeconds / totalDuration) * 100;
+      countdownBar.style.width = percentage + '%';
+    }
+
+    // Countdown interval
+    setInterval(() => {
+      remainingSeconds--;
+      if (remainingSeconds <= 0) {
+        fetchDynamicQr();
+      } else {
+        updateProgressBar();
+      }
+    }, 1000);
+
+    fetchDynamicQr();
+  </script>
+</body>
+</html>

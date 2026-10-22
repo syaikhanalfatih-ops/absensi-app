@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Presensi Pintar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+  <!-- Top Navbar -->
+  <nav class="bg-slate-900 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+        <i data-lucide="scan-face" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-bold text-white leading-tight">Presensi Pintar</h1>
+        <p class="text-[11px] text-slate-400">Panel Administrator HRD</p>
+      </div>
+    </div>
+
+    <!-- Nav Links -->
+    <div class="flex items-center gap-2 text-xs">
+      <a href="/admin" class="px-3.5 py-2 rounded-xl bg-blue-600 text-white font-medium flex items-center gap-1.5 shadow-sm">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="/admin/employees.html" class="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5">
+        <i data-lucide="users" class="w-4 h-4"></i>
+        <span>Karyawan</span>
+      </a>
+      <a href="/admin/office.html" class="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5">
+        <i data-lucide="map-pin" class="w-4 h-4"></i>
+        <span>Geofence Kantor</span>
+      </a>
+      <a href="/admin/qr-display.html" target="_blank" class="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5">
+        <i data-lucide="qr-code" class="w-4 h-4"></i>
+        <span>Layar QR Lobi</span>
+      </a>
+      <button id="adminLogoutBtn" class="ml-2 px-3 py-2 rounded-xl bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-slate-700/60 transition flex items-center gap-1.5">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
+        <span>Keluar</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+
+    <!-- Top Greeting & Date Filter -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h2 class="text-xl font-bold text-white">Ringkasan Presensi Pegawai</h2>
+        <p class="text-xs text-slate-400 mt-0.5">Pantau absensi real-time, biometrik wajah, dan lokasi GPS pegawai.</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-xs">
+          <i data-lucide="calendar" class="w-4 h-4 text-slate-400"></i>
+          <input type="date" id="filterDate" class="bg-transparent text-white focus:outline-none text-xs">
+        </div>
+        <button id="btnExportCsv" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs flex items-center gap-1.5 transition shadow-sm">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>Unduh CSV</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <!-- Total Karyawan -->
+      <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-400 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="users" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Total Pegawai</p>
+          <h3 id="statTotalEmployees" class="text-2xl font-bold text-white">0</h3>
+        </div>
+      </div>
+
+      <!-- Hadir Hari Ini -->
+      <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="user-check" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Hadir Hari Ini</p>
+          <h3 id="statTotalPresent" class="text-2xl font-bold text-emerald-400">0</h3>
+        </div>
+      </div>
+
+      <!-- Terlambat -->
+      <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-amber-600/10 border border-amber-500/20 text-amber-400 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="clock" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Terlambat</p>
+          <h3 id="statTotalLate" class="text-2xl font-bold text-amber-400">0</h3>
+        </div>
+      </div>
+
+      <!-- Belum Absen -->
+      <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-rose-600/10 border border-rose-500/20 text-rose-400 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="user-x" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Belum Hadir</p>
+          <h3 id="statNotPresent" class="text-2xl font-bold text-rose-400">0</h3>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attendance Log Table Card -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="list" class="w-5 h-5 text-blue-400"></i>
+          <h3 class="font-semibold text-sm text-white">Log Presensi Pegawai</h3>
+        </div>
+        <div class="text-xs text-slate-400">
+          Menampilkan <span id="logCount" class="font-semibold text-slate-200">0</span> data
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-800/60 uppercase tracking-wider text-[11px] text-slate-400 border-b border-slate-800">
+            <tr>
+              <th class="p-3.5">Foto</th>
+              <th class="p-3.5">Pegawai</th>
+              <th class="p-3.5">Departemen</th>
+              <th class="p-3.5">Jam Masuk</th>
+              <th class="p-3.5">Jarak (m)</th>
+              <th class="p-3.5">Metode</th>
+              <th class="p-3.5">Jam Pulang</th>
+              <th class="p-3.5">Status</th>
+            </tr>
+          </thead>
+          <tbody id="attendanceTableBody" class="divide-y divide-slate-800/60">
+            <tr>
+              <td colspan="8" class="p-8 text-center text-slate-500">Memuat log presensi...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Photo Preview Modal -->
+  <div id="photoPreviewModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-4 max-w-sm w-full relative shadow-2xl flex flex-col items-center">
+      <button onclick="closePhotoModal()" class="absolute right-4 top-4 p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+      <h4 class="text-sm font-semibold text-white mb-3">Bukti Foto Presensi</h4>
+      <img id="modalPreviewImg" src="" class="w-full aspect-[3/4] object-cover rounded-2xl border border-slate-700">
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    const token = localStorage.getItem('auth_token');
+    const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+
+    if (!token || userInfo.role !== 'admin') {
+      window.location.href = '/login';
+    }
+
+    const filterDateInput = document.getElementById('filterDate');
+    const today = new Date().toISOString().split('T')[0];
+    filterDateInput.value = today;
+
+    // Load Stats
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/admin/stats', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('statTotalEmployees').textContent = data.stats.total_employees;
+          document.getElementById('statTotalPresent').textContent = data.stats.total_present;
+          document.getElementById('statTotalLate').textContent = data.stats.total_late;
+          document.getElementById('statNotPresent').textContent = data.stats.not_present;
+        }
+      } catch (e) {
+        console.error('Error stats:', e);
+      }
+    }
+
+    // Load Logs
+    async function loadLogs(date) {
+      const tbody = document.getElementById('attendanceTableBody');
+      tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-500">Memuat log presensi...</td></tr>';
+
+      try {
+        const res = await fetch(`/api/admin/attendances?date=${date}`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+
+        document.getElementById('logCount').textContent = data.count || 0;
+
+        if (!data.success || data.attendances.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-500">Tidak ada catatan presensi pada tanggal ini.</td></tr>';
+          return;
+        }
+
+        let html = '';
+        data.attendances.forEach(row => {
+          const isLate = row.status === 'late';
+          const statusBadge = isLate 
+            ? '<span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">Terlambat</span>'
+            : '<span class="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">Tepat Waktu</span>';
+
+          const photoSrc = row.check_in_photo
+            ? (row.check_in_photo.startsWith('data:image') ? row.check_in_photo : `/uploads/selfies/${row.check_in_photo}`)
+            : null;
+
+          const photoHtml = photoSrc
+            ? `<img src="${photoSrc}" onclick="openPhotoModal('${photoSrc.replace(/'/g, "\\'")}')" class="w-9 h-9 rounded-xl object-cover cursor-pointer hover:opacity-80 border border-slate-700">`
+            : `<div class="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-slate-600"><i data-lucide="image" class="w-4 h-4"></i></div>`;
+
+          const methodBadge = {
+            'face': '<span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">Wajah AI</span>',
+            'qr': '<span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20">QR Lobi</span>',
+            'gps': '<span class="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">GPS Selfie</span>'
+          }[row.check_in_method] || '<span class="text-slate-500">-</span>';
+
+          html += `
+            <tr class="hover:bg-slate-800/40 transition">
+              <td class="p-3.5">${photoHtml}</td>
+              <td class="p-3.5 font-medium text-white">
+                <div>${row.user_name}</div>
+                <div class="text-[11px] text-slate-400 font-normal">NIP: ${row.employee_id}</div>
+              </td>
+              <td class="p-3.5 text-slate-400">
+                <div>${row.department || '-'}</div>
+                <div class="text-[11px] text-slate-500">${row.position || '-'}</div>
+              </td>
+              <td class="p-3.5 font-semibold text-slate-200">${row.check_in_time ? row.check_in_time.substring(0, 5) + ' WIB' : '-'}</td>
+              <td class="p-3.5 text-slate-400">${row.check_in_distance !== null ? row.check_in_distance + ' m' : '-'}</td>
+              <td class="p-3.5">${methodBadge}</td>
+              <td class="p-3.5 text-slate-300">${row.check_out_time ? row.check_out_time.substring(0, 5) + ' WIB' : '-'}</td>
+              <td class="p-3.5">${statusBadge}</td>
+            </tr>
+          `;
+        });
+
+        tbody.innerHTML = html;
+        lucide.createIcons();
+      } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-rose-500">Gagal memuat log presensi.</td></tr>';
+      }
+    }
+
+    // Photo Modal
+    function openPhotoModal(src) {
+      document.getElementById('modalPreviewImg').src = src;
+      document.getElementById('photoPreviewModal').classList.remove('hidden');
+    }
+
+    function closePhotoModal() {
+      document.getElementById('photoPreviewModal').classList.add('hidden');
+    }
+
+    // Filter change
+    filterDateInput.addEventListener('change', () => {
+      loadLogs(filterDateInput.value);
+    });
+
+    // Export CSV
+    document.getElementById('btnExportCsv').addEventListener('click', () => {
+      const date = filterDateInput.value;
+      window.open(`/api/admin/export?start_date=${date}&end_date=${date}&token=${token}`, '_blank');
+    });
+
+    // Logout
+    document.getElementById('adminLogoutBtn').addEventListener('click', async () => {
+      if (confirm('Keluar dari panel admin?')) {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        localStorage.clear();
+        window.location.href = '/login';
+      }
+    });
+
+    // Init
+    loadStats();
+    loadLogs(today);
+  </script>
+</body>
+</html>

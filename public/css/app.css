@@ -1,0 +1,106 @@
+/* Custom styling & mobile viewport fixes */
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --bg-dark: #0f172a;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* Mobile device container preview for desktop */
+@media (min-width: 768px) {
+  .mobile-container {
+    max-width: 440px;
+    margin: 20px auto;
+    border-radius: 36px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 12px #1e293b;
+    height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+}
+
+@media (max-width: 767px) {
+  .mobile-container {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Camera scan guide circle */
+.face-scan-guide {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 240px;
+  height: 290px;
+  border: 3px dashed #3b82f6;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: pulse-border 2s infinite ease-in-out;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.65);
+}
+
+.face-scan-guide.success {
+  border-color: #22c55e;
+  animation: none;
+}
+
+.face-scan-guide.fail {
+  border-color: #ef4444;
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: rgba(59, 130, 246, 0.9);
+    box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.7);
+  }
+  50% {
+    border-color: rgba(96, 165, 250, 0.4);
+    box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.8);
+  }
+}
+
+/* Radar pulse animation for GPS indicator */
+.radar-pulse {
+  position: relative;
+}
+.radar-pulse::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 50%;
+  border: 2px solid #22c55e;
+  animation: radar 2s infinite ease-out;
+}
+
+@keyframes radar {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+/* Bottom navigation bar active states */
+.nav-item.active {
+  color: #2563eb;
+}
+.nav-item.active svg {
+  stroke-width: 2.5;
+}

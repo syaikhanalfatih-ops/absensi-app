@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Presensi Pintar Mobile</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/app.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Face API Local -->
+  <script src="/vendor/face-api.min.js"></script>
+  <!-- HTML5 QR Code Local -->
+  <script src="/vendor/html5-qrcode.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+  <div class="mobile-container bg-slate-900 border border-slate-800 text-slate-100 flex flex-col justify-between">
+    
+    <!-- Top Bar -->
+    <header class="p-4 bg-slate-900/90 backdrop-blur border-b border-slate-800 flex items-center justify-between z-10">
+      <div class="flex items-center gap-3">
+        <div id="userAvatarContainer" class="w-10 h-10 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 font-bold overflow-hidden">
+          <i data-lucide="user" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h2 id="userName" class="text-sm font-semibold text-white leading-tight">Memuat...</h2>
+          <p id="userRole" class="text-[11px] text-slate-400">Pegawai</p>
+        </div>
+      </div>
+      <button id="logoutBtn" title="Keluar" class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-red-400 transition">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
+      </button>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
+
+      <!-- TAB 1: PRESENSI UTAMA -->
+      <section id="tabPresensi" class="space-y-4">
+        
+        <!-- Live Clock & Date Card -->
+        <div class="p-5 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xl shadow-blue-500/20 relative overflow-hidden">
+          <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+          <div class="flex items-center justify-between text-blue-100 text-xs font-medium mb-1">
+            <span id="currentDate">Memuat Tanggal...</span>
+            <span class="flex items-center gap-1.5 bg-black/20 px-2 py-0.5 rounded-full text-[11px]">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              WIB
+            </span>
+          </div>
+          <div id="liveClock" class="text-4xl font-extrabold tracking-tight my-1 font-mono">00:00:00</div>
+          <p id="officeName" class="text-xs text-blue-100/80 flex items-center gap-1 mt-2">
+            <i data-lucide="building" class="w-3.5 h-3.5"></i>
+            <span>Kantor: Memuat...</span>
+          </p>
+        </div>
+
+        <!-- Geolocation & Radius Status Card -->
+        <div class="p-4 rounded-2xl bg-slate-800/70 border border-slate-700/60 flex flex-col gap-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="map-pin" class="w-4 h-4 text-blue-400"></i> Validasi Radius Kantor
+            </span>
+            <button id="refreshGpsBtn" class="text-[11px] text-blue-400 hover:text-blue-300 flex items-center gap-1">
+              <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh GPS
+            </button>
+          </div>
+
+          <div id="gpsStatusContainer" class="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-3">
+            <div id="gpsIndicatorDot" class="w-3.5 h-3.5 rounded-full bg-yellow-400 animate-pulse flex-shrink-0"></div>
+            <div class="text-xs flex-1">
+              <div id="gpsStatusText" class="font-medium text-slate-200">Mendeteksi koordinat GPS...</div>
+              <div id="gpsDistanceText" class="text-[11px] text-slate-400">Pastikan izin lokasi browser diizinkan.</div>
+            </div>
+          </div>
+
+          <!-- Dev Mode / Mock Geofence for Testing -->
+          <div class="pt-1 flex items-center justify-between text-[11px] text-slate-400">
+            <span>Uji coba jarak:</span>
+            <button id="toggleMockGpsBtn" class="text-blue-400 hover:underline">
+              [Set ke Posisi Kantor]
+            </button>
+          </div>
+        </div>
+
+        <!-- Status Absen Hari Ini Card -->
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Check In Card -->
+          <div class="p-3.5 rounded-2xl bg-slate-800/50 border border-slate-700/60 relative overflow-hidden">
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+              <span>Jam Masuk</span>
+              <i data-lucide="log-in" class="w-4 h-4 text-blue-400"></i>
+            </div>
+            <div id="checkInTimeText" class="text-lg font-bold text-slate-100">--:--</div>
+            <div id="checkInStatusBadge" class="mt-1 text-[11px] font-medium text-slate-400">Belum Absen</div>
+          </div>
+
+          <!-- Check Out Card -->
+          <div class="p-3.5 rounded-2xl bg-slate-800/50 border border-slate-700/60 relative overflow-hidden">
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+              <span>Jam Pulang</span>
+              <i data-lucide="log-out" class="w-4 h-4 text-indigo-400"></i>
+            </div>
+            <div id="checkOutTimeText" class="text-lg font-bold text-slate-100">--:--</div>
+            <div id="checkOutStatusBadge" class="mt-1 text-[11px] font-medium text-slate-400">Belum Pulang</div>
+          </div>
+        </div>
+
+        <!-- Biometric Warning If Face Not Enrolled -->
+        <div id="faceWarningBanner" class="hidden p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-center justify-between">
+          <div class="flex items-center gap-2 text-xs text-amber-400">
+            <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0"></i>
+            <span>Wajah biometrik belum didaftarkan!</span>
+          </div>
+          <a href="/register-face.html" class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-lg text-xs">
+            Daftar Sekarang
+          </a>
+        </div>
+
+        <!-- Attendance Action Buttons -->
+        <div class="space-y-2.5 pt-2">
+          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Aksi Presensi</h3>
+          
+          <div class="grid grid-cols-2 gap-3">
+            <!-- Tombol Absen Masuk -->
+            <button id="btnOpenCheckIn"
+              class="py-4 px-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-sm shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition flex flex-col items-center justify-center gap-1.5">
+              <i data-lucide="scan-face" class="w-6 h-6"></i>
+              <span>Absen Masuk</span>
+            </button>
+
+            <!-- Tombol Absen Pulang -->
+            <button id="btnOpenCheckOut"
+              class="py-4 px-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-blue-600/20 active:scale-[0.98] transition flex flex-col items-center justify-center gap-1.5">
+              <i data-lucide="door-closed" class="w-6 h-6"></i>
+              <span>Absen Pulang</span>
+            </button>
+          </div>
+
+          <!-- Secondary Action: Scan QR Kantor -->
+          <button id="btnOpenQrScanner"
+            class="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-slate-200 text-xs font-medium transition flex items-center justify-center gap-2">
+            <i data-lucide="qr-code" class="w-4 h-4 text-blue-400"></i>
+            <span>Scan QR Code Kantor (Lobi)</span>
+          </button>
+        </div>
+
+      </section>
+
+      <!-- TAB 2: RIWAYAT ABSENSI -->
+      <section id="tabRiwayat" class="hidden space-y-3">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-white">Riwayat Absensi Bulan Ini</h3>
+          <span id="historyMonthLabel" class="text-xs text-slate-400">Oktober 2026</span>
+        </div>
+
+        <div id="historyListContainer" class="space-y-2.5">
+          <div class="text-center py-8 text-xs text-slate-500">Memuat riwayat absensi...</div>
+        </div>
+      </section>
+
+      <!-- TAB 3: PROFIL & BIOMETRIK -->
+      <section id="tabProfil" class="hidden space-y-4">
+        <div class="p-5 rounded-3xl bg-slate-800/80 border border-slate-700 text-center flex flex-col items-center">
+          <div id="profileAvatarLarge" class="w-20 h-20 rounded-full bg-blue-600/20 border-2 border-blue-500/50 flex items-center justify-center text-blue-400 mb-3 overflow-hidden shadow-inner">
+            <i data-lucide="user" class="w-10 h-10"></i>
+          </div>
+          <h3 id="profileName" class="text-base font-bold text-white">Budi Santoso</h3>
+          <p id="profileNip" class="text-xs text-slate-400 mt-0.5">NIP: EMP001</p>
+          <span id="profilePosition" class="mt-2 px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-[11px] font-medium border border-blue-500/30">
+            Software Engineer
+          </span>
+        </div>
+
+        <!-- Info List -->
+        <div class="p-4 rounded-2xl bg-slate-800/50 border border-slate-700 space-y-3 text-xs">
+          <div class="flex justify-between py-1 border-b border-slate-700/60">
+            <span class="text-slate-400">Departemen</span>
+            <span id="profileDept" class="font-medium text-slate-200">-</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-700/60">
+            <span class="text-slate-400">Email</span>
+            <span id="profileEmail" class="font-medium text-slate-200">-</span>
+          </div>
+          <div class="flex justify-between py-1 border-b border-slate-700/60">
+            <span class="text-slate-400">Kantor Penugasan</span>
+            <span id="profileOffice" class="font-medium text-slate-200">-</span>
+          </div>
+          <div class="flex justify-between py-1">
+            <span class="text-slate-400">Biometrik Wajah</span>
+            <span id="profileFaceStatus" class="font-medium text-emerald-400 flex items-center gap-1">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Terdaftar
+            </span>
+          </div>
+        </div>
+
+        <a href="/register-face.html"
+          class="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs flex items-center justify-center gap-2 transition">
+          <i data-lucide="scan-face" class="w-4 h-4"></i>
+          <span>Pindai Ulang Biometrik Wajah</span>
+        </a>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="absolute bottom-0 left-0 right-0 h-16 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 flex items-center justify-around px-4 z-20">
+      <button onclick="switchTab('presensi')" id="navPresensi" class="nav-item active flex flex-col items-center gap-1 text-slate-400">
+        <i data-lucide="clock" class="w-5 h-5"></i>
+        <span class="text-[10px] font-medium">Presensi</span>
+      </button>
+      <button onclick="switchTab('riwayat')" id="navRiwayat" class="nav-item flex flex-col items-center gap-1 text-slate-400">
+        <i data-lucide="calendar" class="w-5 h-5"></i>
+        <span class="text-[10px] font-medium">Riwayat</span>
+      </button>
+      <button onclick="switchTab('profil')" id="navProfil" class="nav-item flex flex-col items-center gap-1 text-slate-400">
+        <i data-lucide="user-check" class="w-5 h-5"></i>
+        <span class="text-[10px] font-medium">Profil</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- MODAL: FACE RECOGNITION CAMERA SCANNER -->
+  <div id="faceModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-4 flex flex-col items-center relative shadow-2xl">
+      <!-- Close Button -->
+      <button onclick="closeFaceModal()" class="absolute right-4 top-4 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+
+      <h3 id="faceModalTitle" class="text-base font-bold text-white mb-1">Verifikasi Wajah</h3>
+      <p id="faceModalSubtitle" class="text-xs text-slate-400 mb-3 text-center">Posisikan wajah tepat di lingkaran</p>
+
+      <!-- Camera Preview -->
+      <div class="relative w-full aspect-[3/4] max-w-[280px] rounded-2xl overflow-hidden bg-black border border-slate-700 flex items-center justify-center">
+        <video id="modalVideo" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
+        <canvas id="modalOverlay" class="absolute top-0 left-0 w-full h-full transform -scale-x-100 pointer-events-none"></canvas>
+        <div id="modalGuideOval" class="face-scan-guide"></div>
+
+        <!-- Recognition Match Badge -->
+        <div id="faceMatchBadge" class="absolute bottom-3 left-3 right-3 py-1.5 px-3 bg-slate-900/80 backdrop-blur rounded-xl text-center text-xs text-slate-300">
+          Mendeteksi wajah...
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <button id="btnSubmitFaceAttendance" disabled
+        class="w-full max-w-[280px] mt-4 py-3 bg-emerald-600 disabled:bg-slate-800 disabled:text-slate-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 transition">
+        <i data-lucide="check" class="w-4 h-4"></i>
+        <span id="btnSubmitFaceText">Konfirmasi Presensi</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: QR CODE SCANNER -->
+  <div id="qrModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-4 flex flex-col items-center relative shadow-2xl">
+      <button onclick="closeQrModal()" class="absolute right-4 top-4 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+
+      <h3 class="text-base font-bold text-white mb-1">Scan QR Code Lobi</h3>
+      <p class="text-xs text-slate-400 mb-3 text-center">Arahkan kamera ke layar QR di kantor</p>
+
+      <div id="qrReader" class="w-full max-w-[280px] aspect-square rounded-2xl overflow-hidden bg-black border border-slate-700"></div>
+
+      <div id="qrScanStatus" class="mt-3 text-xs text-slate-400 text-center">
+        Menunggu deteksi QR code...
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
