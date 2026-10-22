@@ -6,6 +6,67 @@ const db = require('../config/db');
 const { authenticate } = require('../middleware/auth');
 const { saveBase64Image } = require('../middleware/upload');
 
+// Register Pegawai Baru (Self-Service)
+router.post('/register', async (req, res) => {
+    try {
+        const { employee_id, name, email, password, position, department, phone } = req.body;
+
+        if (!employee_id || !name || !email || !password) {
+            return res.status(400).json({ success: false, message: 'NIP/NIK, nama, email, dan password wajib diisi.' });
+        }
+
+        const [existing] = await db.query(
+            'SELECT id FROM users WHERE email = ? OR employee_id = ?',
+            [email, employee_id]
+        );
+
+        if (existing.length > 0) {
+            return res.status(400).json({ success: false, message: 'NIP atau email sudah terdaftar.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const [result] = await db.query(
+            `INSERT INTO users (employee_id, name, email, password, role, position, department, phone, office_id, is_active)
+             VALUES (?, ?, ?, ?, 'employee', ?, ?, ?, 1, 1)`,
+            [
+                employee_id.trim(),
+                name.trim(),
+                email.trim().toLowerCase(),
+                hashedPassword,
+                position ? position.trim() : 'Staff',
+                department ? department.trim() : 'Operasional',
+                phone ? phone.trim() : null
+            ]
+        );
+
+        const token = jwt.sign(
+            { id: result.insertId, employee_id, name, email, role: 'employee', office_id: 1 },
+            process.env.JWT_SECRET || 'super_secret_jwt_key_absensi_2026',
+            { expiresIn: '7d' }
+        );
+
+        res.json({
+            success: true,
+            message: 'Pendaftaran berhasil! Akun pegawai siap digunakan.',
+            token,
+            user: {
+                id: result.insertId,
+                employee_id,
+                name,
+                email,
+                role: 'employee',
+                position: position || 'Staff',
+                department: department || 'Operasional',
+                has_face: false
+            }
+        });
+    } catch (err) {
+        console.error('Error register:', err);
+        res.status(500).json({ success: false, message: 'Gagal mendaftarkan akun.' });
+    }
+});
+
 // Login
 router.post('/login', async (req, res) => {
     try {
