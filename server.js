@@ -18,6 +18,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
+});
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/office', require('./src/routes/office'));
 app.use('/api/attendance', require('./src/routes/attendance'));

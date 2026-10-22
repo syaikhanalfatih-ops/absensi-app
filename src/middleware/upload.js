@@ -2,21 +2,19 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const uploadDir = path.join(__dirname, '../../uploads/selfies');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
+const uploadDir = process.env.VERCEL
+    ? path.join('/tmp', 'selfies')
+    : path.join(__dirname, '../../uploads/selfies');
+
+try {
+    if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+    }
+} catch (e) {
+    // Abaikan jika filesystem read-only di serverless
 }
 
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname) || '.jpg';
-        cb(null, 'selfie-' + uniqueSuffix + ext);
-    }
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
     storage: storage,
@@ -31,7 +29,7 @@ const upload = multer({
 });
 
 /**
- * Simpan base64 string gambar ke file jpg
+ * Simpan base64 string gambar ke file jpg (jika di local)
  * @param {string} base64Data 
  * @returns {string|null} Nama file yang tersimpan
  */
@@ -54,7 +52,7 @@ function saveBase64Image(base64Data) {
         fs.writeFileSync(filePath, buffer);
         return fileName;
     } catch (err) {
-        console.error('Gagal menyimpan gambar base64:', err);
+        // Pada Vercel, jangan simpan ke file disk
         return null;
     }
 }
